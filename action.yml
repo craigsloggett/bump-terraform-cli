@@ -1,6 +1,6 @@
-name: My Composite Action
+name: Bump Terraform CLI
 
-description: A composite action that ...
+description: A composite action to bump the Terraform CLI version.
 
 inputs:
   my-input:
