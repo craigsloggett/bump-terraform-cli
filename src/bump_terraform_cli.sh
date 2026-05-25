@@ -13,22 +13,17 @@ set -euf
 : "${LINE_MATCH:=}"
 : "${LINE_REPLACE:=}"
 
-# Required tools.
-for utility in curl jq yq; do
-  if ! command -v "${utility}" >/dev/null; then
-    printf '%s is not installed. Unable to bump the Terraform CLI version.\n' "${utility}" >&2
-    exit 1
-  fi
-done
-
-discover_version() {
-  curl -sf https://checkpoint-api.hashicorp.com/v1/check/terraform | jq -r '.current_version'
-}
-
 die() {
   printf '%s\n' "$1" >&2
   exit 1
 }
+
+validate_utilities() (
+  for utility in "$@"; do
+    command -v "${utility}" >/dev/null 2>&1 ||
+      die "Required utility not installed: ${utility}"
+  done
+)
 
 validate_inputs() (
   [ -f "${FILE}" ] || die "File not found: ${FILE}"
@@ -50,57 +45,81 @@ validate_inputs() (
   fi
 )
 
+discover_latest_version() (
+  latest_version=$(
+    curl -sf https://checkpoint-api.hashicorp.com/v1/check/terraform |
+      jq -r '.current_version // empty'
+  )
+  [ -n "${latest_version}" ] ||
+    die 'Failed to determine the latest version.'
+
+  printf '%s\n' "${latest_version}"
+)
+
 bump_yaml() {
-  _current=$(yq "${YAML_PATH}" "${FILE}")
-  if [ "${_current}" = "null" ]; then
+  current_version=$(yq "${YAML_PATH}" "${FILE}") || die "yq failed reading ${FILE}."
+
+  [ "${current_version}" != "null" ] ||
     die "Path ${YAML_PATH} not found in ${FILE}."
-  fi
-  if [ "${_current}" = "${VERSION}" ]; then
-    CHANGED=false
-    return
-  fi
-  yq "${YAML_PATH} = \"${VERSION}\"" -i "${FILE}"
-  CHANGED=true
+
+  [ "${current_version}" != "${LATEST_VERSION}" ] ||
+    return 1 # No change, signal VERSION_CHANGES="false"
+
+  yq "${YAML_PATH} = \"${LATEST_VERSION}\"" -i "${FILE}" ||
+    die "yq failed writing ${FILE}."
 }
 
 bump_line() {
-  _matches=$(awk -v pattern="${LINE_MATCH}" '$0 ~ pattern { c++ } END { print c+0 }' "${FILE}")
-  if [ "${_matches}" -eq 0 ]; then
+  match_count=$(grep -cE "${LINE_MATCH}" "${FILE}") || true
+
+  [ "${match_count}" -ge 1 ] ||
     die "No line in ${FILE} matched pattern: ${LINE_MATCH}"
-  fi
-  if [ "${_matches}" -gt 1 ]; then
-    die "Pattern matched ${_matches} lines in ${FILE}; refine the pattern to match exactly one line."
-  fi
-  _replacement=$(printf '%s' "${LINE_REPLACE}" | sed "s|{version}|${VERSION}|g")
-  _current=$(awk -v pattern="${LINE_MATCH}" '$0 ~ pattern { print; exit }' "${FILE}")
-  if [ "${_current}" = "${_replacement}" ]; then
-    CHANGED=false
-    return
-  fi
-  awk -v pattern="${LINE_MATCH}" -v replacement="${_replacement}" '
-    $0 ~ pattern { print replacement; next }
-    { print }
-  ' "${FILE}" >"${FILE}.new"
-  mv "${FILE}.new" "${FILE}"
-  CHANGED=true
+
+  [ "${match_count}" -le 1 ] ||
+    die "Pattern matched ${match_count} lines in ${FILE}; refine the pattern to match exactly one line."
+
+  awk -v pattern="${LINE_MATCH}" -v replacement="${LINE_REPLACE}" -v version="${LATEST_VERSION}" '
+    $0 ~ pattern {
+      output = replacement                 # Working copy of the replacement template.
+      gsub(/\{version\}/, version, output) # Substitute {version} with the latest version.
+      print output
+      next                                 # Skip the passthrough block for this line.
+    }
+    { print }                              # Passthrough for non-matching lines.
+  ' "${FILE}" >"${STAGING}" ||
+    die "awk failed rewriting ${FILE}."
+
+  cmp -s "${FILE}" "${STAGING}" &&
+    return 1 # No change, signal VERSION_CHANGES="false"
+
+  mv "${STAGING}" "${FILE}" ||
+    die "Failed to move ${STAGING} to ${FILE}."
 }
 
 emit_outputs() {
-  printf 'version=%s\n' "${VERSION}" >>"${GITHUB_OUTPUT}"
-  printf 'changed=%s\n' "${CHANGED}" >>"${GITHUB_OUTPUT}"
+  printf 'version=%s\n' "${LATEST_VERSION}" >>"${GITHUB_OUTPUT}"
+  printf 'changed=%s\n' "${VERSION_CHANGED}" >>"${GITHUB_OUTPUT}"
 }
 
 main() {
-  VERSION=$(discover_version)
-  if [ -z "${VERSION}" ] || [ "${VERSION}" = "null" ]; then
-    die 'Failed to determine the latest version.'
-  fi
+  validate_utilities curl jq yq
   validate_inputs
+
+  STAGING=$(mktemp "${FILE}.XXXXXX")
+  readonly STAGING
+  trap 'rm -f "${STAGING}"' EXIT
+
+  LATEST_VERSION=$(discover_latest_version)
+  readonly LATEST_VERSION
+
+  VERSION_CHANGED="false"
   if [ -n "${YAML_PATH}" ]; then
-    bump_yaml
+    bump_yaml && VERSION_CHANGED="true"
   else
-    bump_line
+    bump_line && VERSION_CHANGED="true"
   fi
+  readonly VERSION_CHANGED
+
   emit_outputs
 }
 
