@@ -66,7 +66,7 @@ bump_yaml() {
     return 1 # No change, signal VERSION_CHANGED="false"
 
   yq "${YAML_PATH} = \"${LATEST_VERSION}\"" -i "${FILE}" ||
-    die "yq failed writing ${FILE}."
+    exit 1
 }
 
 bump_line() {
@@ -87,13 +87,13 @@ bump_line() {
     }
     { print }                              # Passthrough for non-matching lines.
   ' "${FILE}" >"${STAGING}" ||
-    die "awk failed rewriting ${FILE}."
+    exit 1
 
   cmp -s "${FILE}" "${STAGING}" &&
     return 1 # No change, signal VERSION_CHANGED="false"
 
   mv "${STAGING}" "${FILE}" ||
-    die "Failed to move ${STAGING} to ${FILE}."
+    exit 1
 }
 
 emit_outputs() {
