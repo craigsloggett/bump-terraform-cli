@@ -41,7 +41,7 @@ validate_inputs() (
   fi
 
   if [ -z "${YAML_PATH}" ] && [ -z "${LINE_MATCH}" ]; then
-    die 'Provide either "path" (for YAML) or "match"+"replace" (for line-based files).'
+    die 'Provide either "path" or "match"+"replace".'
   fi
 )
 
