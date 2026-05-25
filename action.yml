@@ -1,25 +1,43 @@
 name: Bump Terraform CLI
 
-description: A composite action to bump the Terraform CLI version.
+description: Update the Terraform CLI version in a file to the latest available release.
 
 inputs:
-  my-input:
-    description: This is my input, there is no other input like it.
+  file:
+    description: Path to the file to update.
+    required: true
+  path:
+    description: >
+      yq expression targeting the value to update in the file: `.inputs.terraform-version.default`
+      Mutually exclusive with match and replace.
     required: false
-    default: The default description.
+    default: ''
+  match:
+    description: Regex pattern matching the line to update in the file. Use with replace.
+    required: false
+    default: ''
+  replace:
+    description: Replacement line. Use {version} as the placeholder for the new version.
+    required: false
+    default: ''
 
 outputs:
-  my-output:
-    description: The output this composite action produces.
-    value: steps.workflow-step.outputs.my-output
+  version:
+    description: The latest Terraform CLI version.
+    value: ${{ steps.bump.outputs.version }}
+  changed:
+    description: Whether the file was modified by this run (true|false).
+    value: ${{ steps.bump.outputs.changed }}
 
 runs:
   using: composite
   steps:
-    - name: Workflow Step
-      id: workflow-step
-      run: |-
-        printf 'my-output=%s\n' "${MY_INPUT}" >> "${GITHUB_OUTPUT}"
+    - name: Bump Terraform CLI
+      id: bump-terraform-cli
+      run: ${{ github.action_path }}/src/bump_terraform_cli.sh
       shell: sh
       env:
-        MY_INPUT: inputs.my-input
+        FILE: ${{ inputs.file }}
+        YAML_PATH: ${{ inputs.path }}
+        LINE_MATCH: ${{ inputs.match }}
+        LINE_REPLACE: ${{ inputs.replace }}
