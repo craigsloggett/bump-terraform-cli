@@ -36,8 +36,8 @@ Open a pull request only when the file actually changed:
 - if: steps.bump-terraform-cli.outputs.changed == 'true'
   uses: craigsloggett/create-github-pull-request@v1
   with:
-    pull-request-head-branch: bump-terraform-cli-${{ steps.bump-terraform-cli.outputs.version }}
     commit-message: 'chore(build): Bump Terraform CLI to ${{ steps.bump-terraform-cli.outputs.version }}'
+    pull-request-head-branch: bump-terraform-cli-${{ steps.bump-terraform-cli.outputs.version }}
 ```
 
 ## Inputs
