@@ -57,7 +57,8 @@ discover_latest_version() (
 )
 
 bump_yaml() {
-  current_version=$(yq "${YAML_PATH}" "${FILE}") || die "yq failed reading ${FILE}."
+  current_version=$(yq "${YAML_PATH}" "${FILE}") ||
+    exit 1
 
   [ "${current_version}" != "null" ] ||
     die "Path ${YAML_PATH} not found in ${FILE}."
