@@ -1,6 +1,6 @@
 # bump-terraform-cli
 
-A composite action that fetches the latest Terraform CLI release and updates a target file with the new version.
+A composite action that fetches the latest Terraform CLI release from the HashiCorp checkpoint API and updates a target file with the new version.
 
 ## Usage
 
@@ -23,20 +23,41 @@ Update a line by regex:
     replace: 'TERRAFORM_VERSION := {version}'
 ```
 
+Open a pull request only when the file actually changed:
+
+```yaml
+- id: bump-terraform-cli
+  uses: craigsloggett/bump-terraform-cli@v1
+  with:
+    file: Dockerfile
+    match: '^ARG TERRAFORM_VERSION='
+    replace: 'ARG TERRAFORM_VERSION={version}'
+
+- if: steps.bump-terraform-cli.outputs.changed == 'true'
+  uses: craigsloggett/create-github-pull-request@v1
+  with:
+    pull-request-head-branch: bump-terraform-cli-${{ steps.bump-terraform-cli.outputs.version }}
+    commit-message: 'chore(build): Bump Terraform CLI to ${{ steps.bump-terraform-cli.outputs.version }}'
+```
+
 ## Inputs
 
 | Input     | Required | Default | Description                                                                                         |
 | --------- | -------- | ------- | ----------------------------------------------------------------------------------------------------|
 | `file`    | Yes      |         | Path to the file to update.                                                                         |
 | `path`    | No       |         | yq expression targeting the value to update in the file (e.g. `.inputs.terraform-version.default`). |
-| `match`   | No       |         | Regex pattern matching the line to update in the file. Use with `replace`.                          |
+| `match`   | No       |         | Extended regex (ERE) matching the line to update. Use with `replace`.                               |
 | `replace` | No       |         | Replacement line. Use `{version}` as the placeholder for the new version.                           |
 
-Provide either `path` (for YAML) or `match` and `replace` (for line-based files), not both. In line-based mode the pattern must match exactly one line; the action errors out if zero or more than one lines match, so refine the pattern if needed.
+Provide either `path` (for YAML) or `match` and `replace` (for line-based files), not both.
+
+For YAML replacements, the path must resolve to an existing value. The action errors out if the path is not found in the file.
+
+For line-based replacements, the match pattern must match exactly one line in the file. The action errors out if zero or more than one lines match. {version} is the only placeholder recognized in replace.
 
 ## Outputs
 
-| Output    | Description                                              |
-| --------- | -------------------------------------------------------- |
-| `version` | The latest Terraform CLI version.                        |
-| `changed` | Whether the file was modified by this run (true\|false). |
+| Output    | Description                                                                                   |
+| --------- | --------------------------------------------------------------------------------------------- |
+| `version` | The latest Terraform CLI version, as reported by the HashiCorp checkpoint API.                |
+| `changed` | `true` if the file was modified by this run, `false` if it was already at the latest version. |
