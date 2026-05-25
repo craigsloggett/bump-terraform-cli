@@ -63,7 +63,7 @@ bump_yaml() {
     die "Path ${YAML_PATH} not found in ${FILE}."
 
   [ "${current_version}" != "${LATEST_VERSION}" ] ||
-    return 1 # No change, signal VERSION_CHANGES="false"
+    return 1 # No change, signal VERSION_CHANGED="false"
 
   yq "${YAML_PATH} = \"${LATEST_VERSION}\"" -i "${FILE}" ||
     die "yq failed writing ${FILE}."
@@ -90,7 +90,7 @@ bump_line() {
     die "awk failed rewriting ${FILE}."
 
   cmp -s "${FILE}" "${STAGING}" &&
-    return 1 # No change, signal VERSION_CHANGES="false"
+    return 1 # No change, signal VERSION_CHANGED="false"
 
   mv "${STAGING}" "${FILE}" ||
     die "Failed to move ${STAGING} to ${FILE}."
