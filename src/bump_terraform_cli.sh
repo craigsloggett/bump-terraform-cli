@@ -2,43 +2,53 @@
 
 set -euf
 
+# Required user inputs.
+: "${FILE:?FILE is required}"
+
+# GitHub Actions runtime environment.
+: "${GITHUB_OUTPUT:?GITHUB_OUTPUT is unset, most likely during testing}"
+
+# Optional user inputs.
 : "${YAML_PATH:=}"
 : "${LINE_MATCH:=}"
 : "${LINE_REPLACE:=}"
 
-# -----------------------------------------------------------------------------
-# Per-tool version discovery — the only per-tool variation across bump-* repos.
-# -----------------------------------------------------------------------------
+# Required tools.
+for utility in curl jq yq; do
+  if ! command -v "${utility}" >/dev/null; then
+    printf '%s is not installed. Unable to bump the Terraform CLI version.\n' "${utility}" >&2
+    exit 1
+  fi
+done
 
 discover_version() {
   curl -sf https://checkpoint-api.hashicorp.com/v1/check/terraform | jq -r '.current_version'
 }
-
-# -----------------------------------------------------------------------------
-# Shared helpers.
-# -----------------------------------------------------------------------------
 
 die() {
   printf '%s\n' "$1" >&2
   exit 1
 }
 
-validate_inputs() {
+validate_inputs() (
   [ -f "${FILE}" ] || die "File not found: ${FILE}"
 
   if [ -n "${LINE_MATCH}" ] && [ -z "${LINE_REPLACE}" ]; then
     die '"match" was provided without "replace".'
   fi
+
   if [ -z "${LINE_MATCH}" ] && [ -n "${LINE_REPLACE}" ]; then
     die '"replace" was provided without "match".'
   fi
+
   if [ -n "${YAML_PATH}" ] && [ -n "${LINE_MATCH}" ]; then
     die 'Provide either "path" or "match"+"replace", not both.'
   fi
+
   if [ -z "${YAML_PATH}" ] && [ -z "${LINE_MATCH}" ]; then
     die 'Provide either "path" (for YAML) or "match"+"replace" (for line-based files).'
   fi
-}
+)
 
 bump_yaml() {
   _current=$(yq "${YAML_PATH}" "${FILE}")
