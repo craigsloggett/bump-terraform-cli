@@ -145,14 +145,14 @@ emit_diff_log() (
   printf '\n::endgroup::\n'
 )
 
-# shellcheck disable=2016,3045 # Backticks and dashes are literal Markdown characters.
+# shellcheck disable=SC2016 # Backticks are literal Markdown code-spans, not command substitution.
 emit_summary() {
   [ "${VERSION_CHANGED}" = "true" ] ||
     return 0
 
   {
-    printf '### Updates Available'
-    printf '- `terraform` can be updated in `%s` to `v%s`\n\n' "${FILE}" "${LATEST_VERSION}"
+    printf -- '### Updates Available\n\n'
+    printf -- '- `terraform` can be updated in `%s` to `v%s`\n\n' "${FILE}" "${LATEST_VERSION}"
   } >>"${GITHUB_STEP_SUMMARY}"
 }
 
