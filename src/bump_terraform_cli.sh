@@ -110,10 +110,10 @@ emit_outputs() {
 # shellcheck disable=SC2016 # Backticks are literal Markdown code-spans, not command substitution.
 emit_summary() {
   if [ "${VERSION_CHANGED}" = "true" ]; then
-    printf '### Terraform CLI bumped to `%s`\n' "${LATEST_VERSION}" >>"${GITHUB_STEP_SUMMARY}"
+    printf 'New Terraform CLI version available: `%s`\n' "${LATEST_VERSION}" >>"${GITHUB_STEP_SUMMARY}"
     printf 'Updated `%s`.\n' "${FILE}" >>"${GITHUB_STEP_SUMMARY}"
   else
-    printf '### Terraform CLI already at `%s`\n' "${LATEST_VERSION}" >>"${GITHUB_STEP_SUMMARY}"
+    printf 'Terraform CLI already at the latest version: `%s`\n' "${LATEST_VERSION}" >>"${GITHUB_STEP_SUMMARY}"
     printf 'No change to `%s`.\n' "${FILE}" >>"${GITHUB_STEP_SUMMARY}"
   fi
 }
