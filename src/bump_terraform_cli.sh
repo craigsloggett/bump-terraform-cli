@@ -131,8 +131,7 @@ emit_summary() {
     return 0
 
   {
-    printf '### Terraform `v%s` Available\n\n' "${LATEST_VERSION}"
-    printf 'Updated: `%s`\n' "${FILE}"
+    printf 'Terraform can be updated in `%s` to `v%s`\n\n' "${FILE}" "${LATEST_VERSION}"
   } >>"${GITHUB_STEP_SUMMARY}"
 }
 
