@@ -24,10 +24,10 @@ inputs:
 outputs:
   version:
     description: The latest Terraform CLI version.
-    value: ${{ steps.bump.outputs.version }}
+    value: ${{ steps.bump-terraform-cli.outputs.version }}
   changed:
     description: Whether the file was modified by this run (true|false).
-    value: ${{ steps.bump.outputs.changed }}
+    value: ${{ steps.bump-terraform-cli.outputs.changed }}
 
 runs:
   using: composite
