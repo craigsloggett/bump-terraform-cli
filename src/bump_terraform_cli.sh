@@ -71,7 +71,27 @@ bump_yaml() {
   [ "${current_version}" != "${LATEST_VERSION}" ] ||
     return 1 # No change, signal VERSION_CHANGED="false"
 
-  yq "${YAML_PATH} = \"${LATEST_VERSION}\"" -i "${FILE}" ||
+  case "${current_version}" in
+    *[!0-9.]*)
+      die "Value at ${YAML_PATH} is '${current_version}'; this action only bumps plain MAJOR.MINOR.PATCH versions."
+      ;;
+  esac
+
+  line_number=$(yq "${YAML_PATH} | line" "${FILE}") ||
+    exit 1
+
+  awk -v line="${line_number}" -v current_version="${current_version}" -v latest_version="${LATEST_VERSION}" '
+    NR == line {                           # Only apply this script to the line number supplied by `yq`.
+      sub(current_version, latest_version) # Substitute the value found at YAML_PATH wih LATEST_VERSION.
+    }
+    { print }                              # Passthrough for non-matching lines.
+  ' "${FILE}" >"${STAGING}" ||
+    exit 1
+
+  cmp -s "${FILE}" "${STAGING}" &&
+    die "Value for ${YAML_PATH} not on its key's line in ${FILE}; block/folded scalars are not supported, use 'match'+'replace' instead."
+
+  mv "${STAGING}" "${FILE}" ||
     exit 1
 }
 
@@ -85,7 +105,7 @@ bump_line() {
     die "Pattern matched ${match_count} lines in ${FILE}; refine the pattern to match exactly one line."
 
   awk -v pattern="${LINE_MATCH}" -v replacement="${LINE_REPLACE}" -v version="${LATEST_VERSION}" '
-    $0 ~ pattern {
+    $0 ~ pattern {                         # Match on the current line using the regex supplied in `pattern`.
       output = replacement                 # Working copy of the replacement template.
       gsub(/\{version\}/, version, output) # Substitute {version} with the latest version.
       print output
