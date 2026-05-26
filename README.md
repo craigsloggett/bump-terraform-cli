@@ -51,9 +51,17 @@ Open a pull request only when the file actually changed:
 
 Provide either `path` (for YAML) or `match` and `replace` (for line-based files), not both.
 
-For YAML replacements, the path must resolve to an existing value. The action errors out if the path is not found in the file.
+For YAML replacements:
 
-For line-based replacements, the match pattern must match exactly one line in the file. The action errors out if zero or more than one lines match. {version} is the only placeholder recognized in replace.
+- The path must begin with `.` and resolve to an existing value.
+- The value must be a plain `MAJOR.MINOR.PATCH` version (no prefixes, suffixes, or constraint operators).
+- The value must sit on the same line as its key. Block and folded scalars are not supported; use `match`/`replace` instead.
+
+For line-based replacements:
+
+- The match pattern must match exactly one line in the file.
+- The action errors out if zero or more than one lines match.
+- `{version}` is the only placeholder recognized in replace.
 
 ## Outputs
 

@@ -7,6 +7,7 @@ set -euf
 
 # GitHub Actions runtime environment.
 : "${GITHUB_OUTPUT:?GITHUB_OUTPUT is unset, most likely during testing}"
+: "${GITHUB_STEP_SUMMARY:?GITHUB_STEP_SUMMARY is unset, most likely during testing}"
 
 # Optional user inputs.
 : "${YAML_PATH:=}"
@@ -29,19 +30,23 @@ validate_inputs() (
   [ -f "${FILE}" ] || die "File not found: ${FILE}"
 
   if [ -n "${LINE_MATCH}" ] && [ -z "${LINE_REPLACE}" ]; then
-    die '"match" was provided without "replace".'
+    die "'match' was provided without 'replace'."
   fi
 
   if [ -z "${LINE_MATCH}" ] && [ -n "${LINE_REPLACE}" ]; then
-    die '"replace" was provided without "match".'
+    die "'replace' was provided without 'match'."
   fi
 
   if [ -n "${YAML_PATH}" ] && [ -n "${LINE_MATCH}" ]; then
-    die 'Provide either "path" or "match"+"replace", not both.'
+    die "Provide either 'path' or 'match'+'replace', not both."
   fi
 
   if [ -z "${YAML_PATH}" ] && [ -z "${LINE_MATCH}" ]; then
-    die 'Provide either "path" or "match"+"replace".'
+    die "Provide either 'path' or 'match'+'replace'."
+  fi
+
+  if [ -n "${YAML_PATH}" ] && [ "${YAML_PATH#.}" = "${YAML_PATH}" ]; then
+    die "Missing leading '.' in path: ${YAML_PATH}"
   fi
 )
 
@@ -66,7 +71,27 @@ bump_yaml() {
   [ "${current_version}" != "${LATEST_VERSION}" ] ||
     return 1 # No change, signal VERSION_CHANGED="false"
 
-  yq "${YAML_PATH} = \"${LATEST_VERSION}\"" -i "${FILE}" ||
+  case "${current_version}" in
+    *[!0-9.]*)
+      die "Value at ${YAML_PATH} is '${current_version}'; this action only bumps plain MAJOR.MINOR.PATCH versions."
+      ;;
+  esac
+
+  line_number=$(yq "${YAML_PATH} | line" "${FILE}") ||
+    exit 1
+
+  awk -v line="${line_number}" -v current_version="${current_version}" -v latest_version="${LATEST_VERSION}" '
+    NR == line {                           # Only apply this script to the line number supplied by `yq`.
+      sub(current_version, latest_version) # Substitute the value found at YAML_PATH wih LATEST_VERSION.
+    }
+    { print }                              # Passthrough for non-matching lines.
+  ' "${FILE}" >"${STAGING}" ||
+    exit 1
+
+  cmp -s "${FILE}" "${STAGING}" &&
+    die "Value for ${YAML_PATH} not on its key's line in ${FILE}; block/folded scalars are not supported, use 'match'+'replace' instead."
+
+  mv "${STAGING}" "${FILE}" ||
     exit 1
 }
 
@@ -80,7 +105,7 @@ bump_line() {
     die "Pattern matched ${match_count} lines in ${FILE}; refine the pattern to match exactly one line."
 
   awk -v pattern="${LINE_MATCH}" -v replacement="${LINE_REPLACE}" -v version="${LATEST_VERSION}" '
-    $0 ~ pattern {
+    $0 ~ pattern {                         # Match on the current line using the regex supplied in `pattern`.
       output = replacement                 # Working copy of the replacement template.
       gsub(/\{version\}/, version, output) # Substitute {version} with the latest version.
       print output
@@ -98,8 +123,37 @@ bump_line() {
 }
 
 emit_outputs() {
-  printf 'version=%s\n' "${LATEST_VERSION}" >>"${GITHUB_OUTPUT}"
-  printf 'changed=%s\n' "${VERSION_CHANGED}" >>"${GITHUB_OUTPUT}"
+  {
+    printf 'version=%s\n' "${LATEST_VERSION}"
+    printf 'changed=%s\n' "${VERSION_CHANGED}"
+  } >>"${GITHUB_OUTPUT}"
+}
+
+emit_state_log() (
+  printf '::group::Status\n'
+  printf 'version=%s\n' "${LATEST_VERSION}"
+  printf 'changed=%s\n' "${VERSION_CHANGED}"
+  printf 'file=%s\n' "${FILE}"
+  printf '::endgroup::\n'
+)
+
+emit_diff_log() (
+  [ "${VERSION_CHANGED}" = "true" ] || return 0
+
+  printf '::group::Changes\n'
+  git -c color.ui=always --no-pager diff -- "${FILE}" || true
+  printf '\n::endgroup::\n'
+)
+
+# shellcheck disable=SC2016 # Backticks are literal Markdown code-spans, not command substitution.
+emit_summary() {
+  [ "${VERSION_CHANGED}" = "true" ] ||
+    return 0
+
+  {
+    printf -- '### Updates Available\n\n'
+    printf -- '- `terraform` can be updated in `%s` to `v%s`\n\n' "${FILE}" "${LATEST_VERSION}"
+  } >>"${GITHUB_STEP_SUMMARY}"
 }
 
 main() {
@@ -122,6 +176,9 @@ main() {
   readonly VERSION_CHANGED
 
   emit_outputs
+  emit_state_log
+  emit_diff_log
+  emit_summary
 }
 
 main "$@"
