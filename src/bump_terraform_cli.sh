@@ -115,6 +115,9 @@ emit_state_log() (
   printf 'latest_version=%s\n' "${LATEST_VERSION}"
   printf 'file=%s\n' "${FILE}"
   printf '::endgroup::\n'
+  printf '::group::Outputs\n'
+  printf '%s\n' "${GITHUB_OUTPUT}"
+  printf '::endgroup::\n'
 )
 
 # shellcheck disable=SC2016 # Backticks are literal Markdown code-spans, not command substitution.
@@ -124,7 +127,7 @@ emit_summary() {
 
   {
     printf '### Terraform `v%s` Available\n\n' "${LATEST_VERSION}"
-    printf 'Updated: `%s`.\n' "${FILE}"
+    printf 'Updated: `%s`\n' "${FILE}"
   } >>"${GITHUB_STEP_SUMMARY}"
 }
 
