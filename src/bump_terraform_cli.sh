@@ -111,13 +111,18 @@ emit_outputs() {
 
 emit_state_log() (
   printf '::group::Status\n'
-  printf 'version_changed=%s\n' "${VERSION_CHANGED}"
-  printf 'latest_version=%s\n' "${LATEST_VERSION}"
+  printf 'version=%s\n' "${LATEST_VERSION}"
+  printf 'changed=%s\n' "${VERSION_CHANGED}"
   printf 'file=%s\n' "${FILE}"
   printf '::endgroup::\n'
-  printf '::group::Outputs\n'
-  printf '%s\n' "${GITHUB_OUTPUT}"
-  printf '::endgroup::\n'
+)
+
+emit_diff_log() (
+  [ "${VERSION_CHANGED}" = "true" ] || return 0
+
+  printf '::group::Changes\n'
+  git -c color.ui=always --no-pager diff -- "${FILE}" || true
+  printf '\n::endgroup::\n'
 )
 
 # shellcheck disable=SC2016 # Backticks are literal Markdown code-spans, not command substitution.
@@ -152,6 +157,7 @@ main() {
 
   emit_outputs
   emit_state_log
+  emit_diff_log
   emit_summary
 }
 
