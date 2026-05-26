@@ -7,6 +7,7 @@ set -euf
 
 # GitHub Actions runtime environment.
 : "${GITHUB_OUTPUT:?GITHUB_OUTPUT is unset, most likely during testing}"
+: "${GITHUB_STEP_SUMMARY:?GITHUB_STEP_SUMMARY is unset, most likely during testing}"
 
 # Optional user inputs.
 : "${YAML_PATH:=}"
@@ -29,19 +30,23 @@ validate_inputs() (
   [ -f "${FILE}" ] || die "File not found: ${FILE}"
 
   if [ -n "${LINE_MATCH}" ] && [ -z "${LINE_REPLACE}" ]; then
-    die '"match" was provided without "replace".'
+    die "'match' was provided without 'replace'."
   fi
 
   if [ -z "${LINE_MATCH}" ] && [ -n "${LINE_REPLACE}" ]; then
-    die '"replace" was provided without "match".'
+    die "'replace' was provided without 'match'."
   fi
 
   if [ -n "${YAML_PATH}" ] && [ -n "${LINE_MATCH}" ]; then
-    die 'Provide either "path" or "match"+"replace", not both.'
+    die "Provide either 'path' or 'match'+'replace', not both."
   fi
 
   if [ -z "${YAML_PATH}" ] && [ -z "${LINE_MATCH}" ]; then
-    die 'Provide either "path" or "match"+"replace".'
+    die "Provide either 'path' or 'match'+'replace'."
+  fi
+
+  if [ -n "${YAML_PATH}" ] && [ "${YAML_PATH#.}" = "${YAML_PATH}" ]; then
+    die "Missing leading '.' in path: ${YAML_PATH}"
   fi
 )
 
@@ -102,6 +107,17 @@ emit_outputs() {
   printf 'changed=%s\n' "${VERSION_CHANGED}" >>"${GITHUB_OUTPUT}"
 }
 
+# shellcheck disable=SC2016 # Backticks are literal Markdown code-spans, not command substitution.
+emit_summary() {
+  if [ "${VERSION_CHANGED}" = "true" ]; then
+    printf '### Terraform CLI bumped to `%s`\n' "${LATEST_VERSION}" >>"${GITHUB_STEP_SUMMARY}"
+    printf 'Updated `%s`.\n' "${FILE}" >>"${GITHUB_STEP_SUMMARY}"
+  else
+    printf '### Terraform CLI already at `%s`\n' "${LATEST_VERSION}" >>"${GITHUB_STEP_SUMMARY}"
+    printf 'No change to `%s`.\n' "${FILE}" >>"${GITHUB_STEP_SUMMARY}"
+  fi
+}
+
 main() {
   validate_utilities curl jq yq
   validate_inputs
@@ -122,6 +138,7 @@ main() {
   readonly VERSION_CHANGED
 
   emit_outputs
+  emit_summary
 }
 
 main "$@"
