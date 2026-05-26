@@ -103,19 +103,29 @@ bump_line() {
 }
 
 emit_outputs() {
-  printf 'version=%s\n' "${LATEST_VERSION}" >>"${GITHUB_OUTPUT}"
-  printf 'changed=%s\n' "${VERSION_CHANGED}" >>"${GITHUB_OUTPUT}"
+  {
+    printf 'version=%s\n' "${LATEST_VERSION}"
+    printf 'changed=%s\n' "${VERSION_CHANGED}"
+  } >>"${GITHUB_OUTPUT}"
 }
+
+emit_state_log() (
+  printf '::group::Status\n'
+  printf 'version_changed=%s\n' "${VERSION_CHANGED}"
+  printf 'latest_version=%s\n' "${LATEST_VERSION}"
+  printf 'file=%s\n' "${FILE}"
+  printf '::endgroup::\n'
+)
 
 # shellcheck disable=SC2016 # Backticks are literal Markdown code-spans, not command substitution.
 emit_summary() {
-  if [ "${VERSION_CHANGED}" = "true" ]; then
-    printf 'New Terraform CLI version available: `%s`\n' "${LATEST_VERSION}" >>"${GITHUB_STEP_SUMMARY}"
-    printf 'Updated: `%s`.\n' "${FILE}" >>"${GITHUB_STEP_SUMMARY}"
-  else
-    printf 'Terraform CLI already at the latest version: `%s`\n' "${LATEST_VERSION}" >>"${GITHUB_STEP_SUMMARY}"
-    printf 'No change to: `%s`.\n' "${FILE}" >>"${GITHUB_STEP_SUMMARY}"
-  fi
+  [ "${VERSION_CHANGED}" = "true" ] ||
+    return 0
+
+  {
+    printf '### Terraform `v%s` Available\n\n' "${LATEST_VERSION}"
+    printf 'Updated: `%s`.\n' "${FILE}"
+  } >>"${GITHUB_STEP_SUMMARY}"
 }
 
 main() {
@@ -138,6 +148,7 @@ main() {
   readonly VERSION_CHANGED
 
   emit_outputs
+  emit_state_log
   emit_summary
 }
 
