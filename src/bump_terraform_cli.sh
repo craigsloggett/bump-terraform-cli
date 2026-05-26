@@ -111,10 +111,10 @@ emit_outputs() {
 emit_summary() {
   if [ "${VERSION_CHANGED}" = "true" ]; then
     printf 'New Terraform CLI version available: `%s`\n' "${LATEST_VERSION}" >>"${GITHUB_STEP_SUMMARY}"
-    printf 'Updated `%s`.\n' "${FILE}" >>"${GITHUB_STEP_SUMMARY}"
+    printf 'Updated: `%s`.\n' "${FILE}" >>"${GITHUB_STEP_SUMMARY}"
   else
     printf 'Terraform CLI already at the latest version: `%s`\n' "${LATEST_VERSION}" >>"${GITHUB_STEP_SUMMARY}"
-    printf 'No change to `%s`.\n' "${FILE}" >>"${GITHUB_STEP_SUMMARY}"
+    printf 'No change to: `%s`.\n' "${FILE}" >>"${GITHUB_STEP_SUMMARY}"
   fi
 }
 
