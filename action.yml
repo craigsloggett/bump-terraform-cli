@@ -6,9 +6,9 @@ inputs:
   file:
     description: Path to the file to update.
     required: true
-  path:
+  yaml_path:
     description: >
-      yq expression targeting the value to update in the file: `.inputs.terraform-version.default`
+      yq expression passed directly to yq, targeting the value to update in the file: `.inputs.terraform-version.default`
       Mutually exclusive with match and replace.
     required: false
     default: ''
@@ -41,6 +41,6 @@ runs:
       shell: sh
       env:
         FILE: ${{ inputs.file }}
-        YAML_PATH: ${{ inputs.path }}
+        YAML_PATH: ${{ inputs.yaml_path }}
         LINE_MATCH: ${{ inputs.match }}
         LINE_REPLACE: ${{ inputs.replace }}
