@@ -29,7 +29,7 @@ validate_inputs() (
   [ -f "${FILE}" ] || die "File not found: ${FILE}"
 
   if [ -n "${YAML_PATH}" ] && [ -n "${LINE_MATCH}" ]; then
-    die "Provide either 'path' or 'match'+'replace', not both."
+    die "Provide either 'yaml_path' or 'match'+'replace', not both."
   fi
 
   if [ -n "${LINE_MATCH}" ] && [ -z "${LINE_REPLACE}" ]; then
@@ -41,11 +41,11 @@ validate_inputs() (
   fi
 
   if [ -z "${YAML_PATH}" ] && [ -z "${LINE_MATCH}" ]; then
-    die "Provide either 'path' or 'match'+'replace'."
+    die "Provide either 'yaml_path' or 'match'+'replace'."
   fi
 
   if [ -n "${YAML_PATH}" ] && [ "${YAML_PATH#.}" = "${YAML_PATH}" ]; then
-    die "Missing leading '.' in path: ${YAML_PATH}"
+    die "Missing leading '.' in yaml_path: ${YAML_PATH}"
   fi
 )
 

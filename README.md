@@ -10,7 +10,16 @@ Update a YAML value by path:
 - uses: craigsloggett/bump-terraform-cli@v1
   with:
     file: .github/workflows/lint.yml
-    path: .jobs.terraform.steps[1].with.terraform_version
+    yaml_path: .jobs.terraform.steps[1].with.terraform_version
+```
+
+Update a YAML value with a yq filter:
+
+```yaml
+- uses: craigsloggett/bump-terraform-cli@v1
+  with:
+    file: .github/workflows/test.yml
+    yaml_path: '.jobs.test.steps[] | select(.uses | test("^hashicorp/setup-terraform@")) | .with.terraform_version'
 ```
 
 Update a line by regex:
@@ -43,18 +52,19 @@ Open a pull request with the new version:
 
 ## Inputs
 
-| Input     | Required | Default | Description                                                                                         |
-| --------- | -------- | ------- | ----------------------------------------------------------------------------------------------------|
-| `file`    | Yes      |         | Path to the file to update.                                                                         |
-| `path`    | No       |         | yq expression targeting the value to update in the file (e.g. `.inputs.terraform-version.default`). |
-| `match`   | No       |         | Extended regex (ERE) matching the line to update. Use with `replace`.                               |
-| `replace` | No       |         | Replacement line. Use `{version}` as the placeholder for the new version.                           |
+| Input       | Required | Default | Description                                                                                         |
+| ----------- | -------- | ------- | --------------------------------------------------------------------------------------------------- |
+| `file`      | Yes      |         | Path to the file to update.                                                                         |
+| `yaml_path` | No       |         | yq expression targeting the value to update in the file (e.g. `.inputs.terraform-version.default`). |
+| `match`     | No       |         | Extended regex (ERE) matching the line to update. Use with `replace`.                               |
+| `replace`   | No       |         | Replacement line. Use `{version}` as the placeholder for the new version.                           |
 
-Provide either `path` (for YAML) or `match` and `replace` (for line-based files), not both.
+Provide either `yaml_path` (for YAML) or `match` and `replace` (for line-based files), not both.
 
 For YAML replacements:
 
-- The path must begin with `.` and resolve to an existing value.
+- `yaml_path` is passed directly to [yq](https://github.com/mikefarah/yq); any expression that resolves to a single scalar works, including filters like `select()`.
+- The expression must begin with `.` and resolve to an existing value.
 - The value must be a plain `MAJOR.MINOR.PATCH` version (no prefixes, suffixes, or constraint operators).
 - The value must sit on the same line as its key. Block and folded scalars are not supported; use `match`/`replace` instead.
 
