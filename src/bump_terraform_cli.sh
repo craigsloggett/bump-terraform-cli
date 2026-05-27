@@ -28,16 +28,16 @@ validate_utilities() (
 validate_inputs() (
   [ -f "${FILE}" ] || die "File not found: ${FILE}"
 
+  if [ -n "${YAML_PATH}" ] && [ -n "${LINE_MATCH}" ]; then
+    die "Provide either 'path' or 'match'+'replace', not both."
+  fi
+
   if [ -n "${LINE_MATCH}" ] && [ -z "${LINE_REPLACE}" ]; then
     die "'match' was provided without 'replace'."
   fi
 
   if [ -z "${LINE_MATCH}" ] && [ -n "${LINE_REPLACE}" ]; then
     die "'replace' was provided without 'match'."
-  fi
-
-  if [ -n "${YAML_PATH}" ] && [ -n "${LINE_MATCH}" ]; then
-    die "Provide either 'path' or 'match'+'replace', not both."
   fi
 
   if [ -z "${YAML_PATH}" ] && [ -z "${LINE_MATCH}" ]; then
