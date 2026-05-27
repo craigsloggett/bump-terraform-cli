@@ -69,3 +69,4 @@ For line-based replacements:
 | --------- | --------------------------------------------------------------------------------------------- |
 | `version` | The latest Terraform CLI version, as reported by the HashiCorp checkpoint API.                |
 | `changed` | `true` if the file was modified by this run, `false` if it was already at the latest version. |
+| `file`    | Path to the file targeted by the bump.                                                        |

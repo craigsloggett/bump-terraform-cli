@@ -7,7 +7,6 @@ set -euf
 
 # GitHub Actions runtime environment.
 : "${GITHUB_OUTPUT:?GITHUB_OUTPUT is unset, most likely during testing}"
-: "${GITHUB_STEP_SUMMARY:?GITHUB_STEP_SUMMARY is unset, most likely during testing}"
 
 # Optional user inputs.
 : "${YAML_PATH:=}"
@@ -126,6 +125,7 @@ emit_outputs() {
   {
     printf 'version=%s\n' "${LATEST_VERSION}"
     printf 'changed=%s\n' "${VERSION_CHANGED}"
+    printf 'file=%s\n' "${FILE}"
   } >>"${GITHUB_OUTPUT}"
 }
 
@@ -144,17 +144,6 @@ emit_diff_log() (
   git -c color.ui=always --no-pager diff -- "${FILE}" || true
   printf '\n::endgroup::\n'
 )
-
-# shellcheck disable=SC2016 # Backticks are literal Markdown code-spans, not command substitution.
-emit_summary() {
-  [ "${VERSION_CHANGED}" = "true" ] ||
-    return 0
-
-  {
-    printf -- '### Updates Available\n\n'
-    printf -- '- `terraform` can be updated in `%s` to `v%s`\n\n' "${FILE}" "${LATEST_VERSION}"
-  } >>"${GITHUB_STEP_SUMMARY}"
-}
 
 main() {
   validate_utilities curl jq yq
@@ -178,7 +167,6 @@ main() {
   emit_outputs
   emit_state_log
   emit_diff_log
-  emit_summary
 }
 
 main "$@"

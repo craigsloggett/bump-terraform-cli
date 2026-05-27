@@ -26,8 +26,11 @@ outputs:
     description: The latest Terraform CLI version.
     value: ${{ steps.bump-terraform-cli.outputs.version }}
   changed:
-    description: Whether the file was modified by this run (true|false).
+    description: Whether the file was modified by this run.
     value: ${{ steps.bump-terraform-cli.outputs.changed }}
+  file:
+    description: Path to the file targeted by the bump.
+    value: ${{ steps.bump-terraform-cli.outputs.file }}
 
 runs:
   using: composite
