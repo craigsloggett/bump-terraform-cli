@@ -8,7 +8,7 @@ inputs:
     required: true
   yaml_path:
     description: >
-      yq expression passed directly to yq, targeting the value to update in the file: `.inputs.terraform-version.default`
+      yq expression targeting the value to update in the file: `.inputs.terraform-version.default`
       Mutually exclusive with match and replace.
     required: false
     default: ''

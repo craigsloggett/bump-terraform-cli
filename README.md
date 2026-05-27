@@ -13,7 +13,7 @@ Update a YAML value by path:
     yaml_path: .jobs.terraform.steps[1].with.terraform_version
 ```
 
-Update a YAML value with a yq filter (here, targeting a setup-terraform step by its `uses` value rather than a brittle step index):
+Update a YAML value with a yq filter:
 
 ```yaml
 - uses: craigsloggett/bump-terraform-cli@v1
