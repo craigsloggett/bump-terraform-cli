@@ -23,7 +23,7 @@ Update a line by regex:
     replace: 'TERRAFORM_VERSION := {version}'
 ```
 
-Open a pull request only when the file actually changed:
+Open a pull request with the new version:
 
 ```yaml
 - id: bump-terraform-cli
@@ -33,12 +33,13 @@ Open a pull request only when the file actually changed:
     match: '^ARG TERRAFORM_VERSION='
     replace: 'ARG TERRAFORM_VERSION={version}'
 
-- if: steps.bump-terraform-cli.outputs.changed == 'true'
-  uses: craigsloggett/create-github-pull-request@v1
+- uses: craigsloggett/create-github-pull-request@v1
   with:
-    commit-message: 'chore(build): Bump Terraform CLI to ${{ steps.bump-terraform-cli.outputs.version }}'
-    pull-request-head-branch: bump-terraform-cli-${{ steps.bump-terraform-cli.outputs.version }}
+    title: 'chore(build): Bump Terraform CLI to ${{ steps.bump-terraform-cli.outputs.version }}'
+    branch: bump-terraform-cli-${{ steps.bump-terraform-cli.outputs.version }}
 ```
+
+`create-github-pull-request` exits cleanly when the working tree is unchanged, so no conditional guard on `outputs.changed` is needed. See its [README](https://github.com/craigsloggett/create-github-pull-request) for token and permissions setup.
 
 ## Inputs
 
