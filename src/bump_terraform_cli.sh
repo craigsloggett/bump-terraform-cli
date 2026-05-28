@@ -131,7 +131,7 @@ emit_outputs() {
 
 emit_state_log() (
   printf '::group::Status\n'
-  printf 'version=%s\n' "${LATEST_VERSION}"
+  printf 'current_version=%s\n' "${LATEST_VERSION}"
   printf 'changed=%s\n' "${VERSION_CHANGED}"
   printf 'file=%s\n' "${FILE}"
   printf '::endgroup::\n'
